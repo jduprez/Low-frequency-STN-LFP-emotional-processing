@@ -18,7 +18,7 @@ num_frex  = 50;
 nCycRange = [4 10];
 
 times2save = -500:15:2000; % downsample to 100 Hz
-basetime   = [ -500 -200 ]; % baseline period
+basetime   = [-500 -200]; % baseline period
 
 %% Load data
 % loaded files have are an EEG structure such as in eeglab
