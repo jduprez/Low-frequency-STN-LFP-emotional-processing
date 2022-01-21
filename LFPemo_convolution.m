@@ -39,6 +39,10 @@ for subno = 1:numfiles
     
     
    LFPemo.data = double(LFPemo.data); % double converts to double precision
+
+   % Here, remove phase-locked activity (ERP subtraction)
+
+   %
     
     % Set times2save for temporal downsampling at 67 Hz
     
