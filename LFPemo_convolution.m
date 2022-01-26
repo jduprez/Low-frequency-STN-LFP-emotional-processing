@@ -1,9 +1,15 @@
 
-% The following code has been used to analyze the data presented in the paper:
-%'Low-frequency subthalamic neural oscillations are involved in explicit and implicit facial emotional processing - a local field potential study' (Duprez et al., XXXX)
-% Time-frequency analyses are done using complex morlet wavelet convolution based on published equations (Cohen 2014 - Analyzing neural time series data).
+% The following code has been used to analyze the data presented in the 
+% paper:
+%'Low-frequency subthalamic neural oscillations are involved in explicit 
+% and implicit facial emotional processing - a local field potential study'
+% (Duprez et al., XXXX)
+% Time-frequency analyses are done using complex morlet wavelet convolution
+% based on published equations (Cohen 2014 - Analyzing neural time series 
+% data).
 % This code has been adapted from Mike X Cohen's one.
-% Although at many places efficiency of this code can be improved, it does correct computations.
+% Although at many places efficiency of this code can be improved, 
+% it does correct computations.
 
 
 %% LFPemo analysis
@@ -18,7 +24,7 @@ num_frex  = 50;
 nCycRange = [4 10];
 
 times2save = -500:15:2000; % downsample to 100 Hz
-basetime   = [-500 -200]; % baseline period
+basetime   = [-600 -300]; % baseline period
 
 %% Load data
 % loaded files have are an EEG structure such as in eeglab
@@ -26,24 +32,28 @@ matfiles = dir(fullfile(['*.mat']));
 numfiles = length(matfiles);
 
 % initialize output time-frequency data
-tf = zeros(numfiles, 4,3,num_frex,size(times2save,2)); % 6 for the number of conditions
+% 4 for the number of conditions, 3 number of channels
+tf = zeros(numfiles, 4, 3, num_frex,size(times2save,2)); 
 
 
 % initialize output itpc data
-itpcz = zeros(numfiles, 4,3,num_frex,size(times2save,2)); % 6 for the number of conditions, 3 number of channels
+% 4 for the number of conditions, 3 number of channels
+itpcz = zeros(numfiles, 4,3,num_frex,size(times2save,2)); 
 
 
 for subno = 1:numfiles
     
     load(matfiles(subno).name)
+    LFPemo.data = double(LFPemo.data); % convert to double precision
     
+    % Here, remove phase-locked activity (ERP subtraction)
     
-   LFPemo.data = double(LFPemo.data); % double converts to double precision
+    LFPemo.data = LFPemo.data - squeeze(mean(LFPemo.data, 3));
+    
+    % With data reflection to avoid edge artifacts
 
-   % Here, remove phase-locked activity (ERP subtraction)
-
-   %
-    
+    LFPemo.data_reflect = [LFPemo.data(:,end:-1:1,:) LFPemo.data(:,:,:) ...
+        LFPemo.data(:,end:-1:1,:) ];
     % Set times2save for temporal downsampling at 67 Hz
     
     times2saveidx = dsearchn(LFPemo.times',times2save');
@@ -51,50 +61,63 @@ for subno = 1:numfiles
     frex = logspace(log10(min_frex),log10(max_frex),num_frex);
     
     % wavelet parameters
-    s = logspace(log10(nCycRange(1)),log10(nCycRange(2)),num_frex)./(2*pi.*frex);
+    s = logspace(log10(nCycRange(1)),log10(nCycRange(2)),...
+        num_frex)./(2*pi.*frex);
     t = -2:1/LFPemo.srate:2;
     halfwave = floor((length(t)-1)/2);
     
     % Data convolution parameters
-    nData = size(LFPemo.data, 3)*LFPemo.pnts;
+    nData = size(LFPemo.data_reflect, 3)*size(LFPemo.data_reflect, 2);
     nWave = length(t);
     nConv = nData+nWave-1;
     
     % Data wavelets
     cmwX = zeros(num_frex,nConv);
     for fi=1:num_frex
-        cmw = fft(  exp(1i*2*pi*frex(fi).*t) .* exp( (-t.^2)/(2*s(fi)^2) )  ,nConv);
-        cmwX(fi,:) = cmw ./ max(cmw); % amplitude-normalize in the frequency domain
+        cmw = fft(  exp(1i*2*pi*frex(fi).*t) .* exp( (-t.^2)/(2*s(fi)^2))...
+            ,nConv);
+        % amplitude-normalize in the frequency domain
+        cmwX(fi,:) = cmw ./ max(cmw); 
     end
     
     % indices for the baseline
     baseidx = dsearchn(LFPemo.times',basetime');
     
     % loop through channels
-    for chani = 1:size(LFPemo.data,1)
-        dataX = fft( reshape(LFPemo.data(chani,:,:),1,nData) ,nConv); %% concatenates all the trials of the first channel
+    for chani = 1:size(LFPemo.data_reflect,1)
+        dataX = fft(reshape(LFPemo.data_reflect(chani,:,:),1,nData)...
+            ,nConv); % concatenates all the trials of the first channel
         
         for fi=1:num_frex
-            as = ifft( dataX.*cmwX(fi,:) );
+            as = ifft(dataX.*cmwX(fi,:) );
             as = as(halfwave+1:end-halfwave);
-            as = reshape(as,1,LFPemo.pnts, size(LFPemo.data, 3));
+            as = reshape(as,1, size(LFPemo.data_reflect, 2), ...
+                size(LFPemo.data_reflect, 3));
+            as = as(:, size(LFPemo.data, 2)+1:size(LFPemo.data, 2)*2,:);
             
             % condition-average baseline
-            basepow = mean(squeeze(mean(abs(as(:,baseidx(1):baseidx(2),:)).^2,2)),1);
-            baseitpc = mean(abs(mean(squeeze(exp(1i*angle(as(:,baseidx(1):baseidx(2),:)))),2)),1);
+            basepow = mean(squeeze(mean(abs(as(:,baseidx(1):baseidx(2),...
+                :)).^2,2)),1);
+            baseitpc = mean(abs(mean(squeeze(exp(1i*angle(as(:,...
+                baseidx(1):baseidx(2),:)))),2)),1);
             
             
             for condi = 1:4
-                tf(subno,condi,chani,fi,:) = 10*log10( mean(abs(as(:,times2saveidx,LFPemo.condition  == condi)).^2,3) ./ basepow ); %
-                itpcz(subno,condi,chani,fi,:) = size(as(:,:,LFPemo.condition== condi),3)* (10*log10(abs(mean(exp(1i*angle(as(:,times2saveidx,LFPemo.condition == condi))),3))./ baseitpc).^2);
-                %  itpcz(subno,condi,chani,fi,:) = 10*log10(abs(mean(exp(1i*angle(as(:,times2saveidx,LFPemo.cond == condi))),3))./ baseitpc);
+                tf(subno,condi,chani,fi,:) = 10*log10(mean(abs(as(:,...
+                    times2saveidx,LFPemo.condition  == condi)).^2,3)...
+                    ./ basepow ); 
+                itpcz(subno,condi,chani,fi,:) = size(as(:,:,...
+                    LFPemo.condition== condi),3)*...
+                    (10*log10(abs(mean(exp(1i*angle(as(:,...
+                    times2saveidx,LFPemo.condition == condi))),3))...
+                    ./ baseitpc).^2);
                 
             end % end condition loop
             
         end % end frequencies loop
         
-        
     end% end channel loop
+    
     disp(['subject ', num2str(subno), ' is done'])
 end% subject loop
 
@@ -106,11 +129,14 @@ end% subject loop
 %
 %
 
-figure(23), clf
+figure(24), clf
 
 climdb  = [-1 1];
-contourf(times2save,frex,squeeze(mean(mean(squeeze(tf(:,:,1,:,:)) ,2) ,1)),60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-300 2000])
+contourf(times2save,frex,squeeze(mean(mean(squeeze(tf(:,:,1,:,:))...
+    ,2) ,1)),60,'linecolor','none')
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-300 2000])
 title('Averaged time-frequency power')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
@@ -120,35 +146,42 @@ colormap jet
 %
 % Power by condition
 figure(2), clf
-condiname = {'Gender-Neutral'; 'Gender-Fear'; 'Emotion-Neutral'; 'Emotion-Fear'; 'Congruent 1€'; 'Incongruent 1€'};
+condiname = {'Gender-Neutral'; 'Gender-Fear'; 'Emotion-Neutral';...
+    'Emotion-Fear'; 'Congruent 1€'; 'Incongruent 1€'};
 climdb  = [-1 1];
 for condi=1:4
     subplot(2,2,condi)
-    contourf(times2save,frex,squeeze(mean(squeeze(tf(:,condi,1,:,:)) ,1)),60,'linecolor','none')
-    set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-300 2000])
+    contourf(times2save,frex,squeeze(mean(squeeze(tf(:,condi,1,:,:))...
+        ,1)),60,'linecolor','none')
+    set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex)...
+        ,log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+        log10(max_frex),6)*10)/10,'xlim', [-300 2000])
     title(condiname(condi))
     xlabel('Time (s)'), ylabel('Frequency (Hz)')
     colorbar
     ylabel(colorbar, 'dB  from baseline')
-    colormap jet
+    %colormap jet
 end
 %
 
-%% Permutation testing to isolate significant clusters of tf power differences from baseline
+%% Permutation testing to isolate significant clusters of tf power 
+%  differences from baseline
 load(matfiles(1).name) % to get the time information from one dataset
 
-tfavg = squeeze(mean(tf(:,:,1,:,:), 2)); % take only first bipolar montage (channel 1)
+% take only first bipolar montage (channel 1)
+tfavg = squeeze(mean(tf2(:,:,1,:,:), 2)); 
 
 nTimepoints = numel(times2save);
 baseidx = dsearchn(times2save',[-500 -200]');
 
 voxel_pval   = 0.01;
-cluster_pval = 0.05;
+cluster_pval = 0.01;
 n_permutes = 1000;
 
 % initialize null hypothesis matrices
 permuted_maxvals = zeros(n_permutes,2,num_frex);
-permuted_vals    = zeros(n_permutes,size(tfavg, 1),num_frex,numel(times2save));
+permuted_vals    = zeros(n_permutes,size(tfavg, 1), ...
+    num_frex,numel(times2save));
 max_clust_info   = zeros(n_permutes,1);
 
 
@@ -156,7 +189,8 @@ for permi=1:n_permutes
     
     for subi = 1:size(tfavg, 1)
         cutpoint = randsample(2:nTimepoints-diff(baseidx)-2,1);
-        permuted_vals(permi,subi,:,:) = tfavg(subi,:,[cutpoint:end 1:cutpoint-1]);
+        permuted_vals(permi,subi,:,:) = tfavg(subi,:,[cutpoint:end ...
+            1:cutpoint-1]);
     end
     disp(['permutation ', num2str(permi), ' is done']);
 end
@@ -173,7 +207,9 @@ figure(28), clf
 subplot(221)
 climdb  = [-1 1];
 contourf(times2save,frex,realmean, 60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
 title('Averaged time-frequency power')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
@@ -185,7 +221,9 @@ colormap jet
 subplot(222)
 climdb  = [-1 1];
 contourf(times2save,frex,zmap, 60,'linecolor','none')
-set(gca,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
 title('unthresholded Z map')
 xlabel('Time (ms)'), ylabel('Frequency (Hz)')
@@ -195,7 +233,9 @@ colormap jet
 
 subplot(223)
 contourf(times2save,frex,threshmean, 60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
 title('Uncorrected power map')
 xlabel('Time (ms)'), ylabel('Frequency (Hz)')
@@ -209,13 +249,16 @@ colormap jet
 % making no assumptions about parameters for p-values
 for permi = 1:n_permutes
     
-    % for cluster correction, apply uncorrected threshold and get maximum cluster sizes
-    fakecorrsz = squeeze((perm_mean(permi,:,:)-mean(perm_mean,1)) ./ std(perm_mean,[],1) );
+    % for cluster correction, apply uncorrected threshold and 
+    % get maximum cluster sizes
+    fakecorrsz = squeeze((perm_mean(permi,:,:)-mean(perm_mean,1))...
+        ./ std(perm_mean,[],1) );
     fakecorrsz(abs(fakecorrsz)<norminv(1-voxel_pval))=0;
     
     % get number of elements in largest supra-threshold cluster
     clustinfo = bwconncomp(fakecorrsz);
-    max_clust_info(permi) = max([ 0 cellfun(@numel,clustinfo.PixelIdxList) ]); % the zero accounts for empty maps
+    max_clust_info(permi) = max([ 0 cellfun...
+        (@numel,clustinfo.PixelIdxList) ]); % zero accounts for empty maps
     % using cellfun here eliminates the need for a slower loop over cells
 end
 
@@ -260,13 +303,15 @@ zmapthresh=logical(zmapthresh);
 figure
 climdb  = [-1 1];
 contourf(times2save,frex,realmean, 60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
 title('Averaged time-frequency power')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
 ylabel(colorbar, 'dB  from baseline')
-colormap jet
+%colormap jet
 hold on
 contour(times2save,frex,zmapthresh, 1,'linecolor','k')
 ylabel('Frequency (Hz)')
@@ -282,8 +327,8 @@ width=800;
 height=500;
 print('figure', '-dpng', '-r1000')
 
-%% Extract power from the tf windows of interest
 
+%% Extract power from the tf windows of interest
 
 time = times2save;
 
@@ -337,36 +382,45 @@ for condi=1:size(tf,2) %
                 % Write out the column variable name of data.
                 if subno==0
                     
-                    fprintf(fid,[ num2str(time_windows(ti,1)) num2str(time_windows(ti,2)) '_f ' num2str(freq_windows(fi,1)) num2str(freq_windows(fi,2)) '\t' ]);
+                    fprintf(fid,[ num2str(time_windows(ti,1)) ...
+                        num2str(time_windows(ti,2)) '_f ' ...
+                        num2str(freq_windows(fi,1)) ...
+                        num2str(freq_windows(fi,2)) '\t' ]);
                     
                 else
                     
                     % get data from large window
-                    % Note: This is condition-specific; you could make it condition-average by taking the mean across the 2nd dimension.
-                    tempdat = squeeze(tf(subno,condi,1,freqidx(fi,1):freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
+                    % Note: This is condition-specific; you could make 
+                    % it condition-average by taking the mean across 
+                    % the 2nd dimension.
+                    tempdat = squeeze(tf(subno,condi,1,...
+                        freqidx(fi,1):freqidx(fi,2),...
+                        timeidx(ti,1):timeidx(ti,2)));
                     
-                    % find max point (must first vectorize otherwise you get max for each line)
+                    % find max point (must first vectorize otherwise you 
+                    % get max for each line)
                     [junk,maxpoint]=max(tempdat(:));
                     
                     % convert that back to 2d coordinates
                     [maxF,maxT]=ind2sub(size(tempdat),maxpoint);
                     
-                    % get the indices from the larger matrix, not the indices of the smaller TF window.
+                    % get the indices from the larger matrix, not the 
+                    % indices of the smaller TF window.
                     maxF = maxF+freqidx(1)-1;
                     maxT = maxT+timeidx(1)-1;
                     
                     % Now write out data and max time/frequency to file.
-                    % fprintf(fid,'%g\t',mean(mean(squeeze(tf(subno,condi,1,maxF-1:maxF+1,maxT-6:maxT+6)),1),2)); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    fprintf(fid,'%g\t',mean(mean(tempdat))); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    % this could also be one line:
-                    % fprintf(fid,'%g\t%g\t%g\t',mean(mean(tf_all(subno,condi,chani,maxF-1:maxF+1,maxT-1:maxT+1,1),4),5),mw_frex(maxF),tx(maxT));
+                    % 6 so as to have a proportional number of frequency 
+                    % (3) and timepoints in the subject TF window
+                    fprintf(fid,'%g\t',mean(mean(tempdat))); 
                 end
                 
             end
             
         end
         
-        fprintf(fid,'\n'); %% CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        % CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        fprintf(fid,'\n'); 
         if subno > 0
             maxfreqdelta1(subno)=frex(maxF);
         else
@@ -427,36 +481,42 @@ for condi=1:size(tf,2) %
                 % Write out the column variable name of data.
                 if subno==0
                     
-                    fprintf(fid,[ num2str(time_windows(ti,1)) num2str(time_windows(ti,2)) '_f ' num2str(freq_windows(fi,1)) num2str(freq_windows(fi,2)) '\t' ]);
+                    fprintf(fid,[ num2str(time_windows(ti,1)) ...
+                        num2str(time_windows(ti,2)) '_f ' ...
+                        num2str(freq_windows(fi,1)) ...
+                        num2str(freq_windows(fi,2)) '\t' ]);
                     
                 else
                     
                     % get data from large window
-                    % Note: This is condition-specific; you could make it condition-average by taking the mean across the 2nd dimension.
-                    tempdat = squeeze(tf(subno,condi,1,freqidx(fi,1):freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
+                    % Note: This is condition-specific; you could make 
+                    % it condition-average by taking the mean across the 
+                    % 2nd dimension.
+                    tempdat = squeeze(tf(subno,condi,1,freqidx(fi,1):...
+                        freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
                     
-                    % find max point (must first vectorize otherwise you get max for each line)
+                    % find max point (must first vectorize otherwise 
+                    % you get max for each line)
                     [junk,maxpoint]=max(tempdat(:));
                     
                     % convert that back to 2d coordinates
                     [maxF,maxT]=ind2sub(size(tempdat),maxpoint);
                     
-                    % get the indices from the larger matrix, not the indices of the smaller TF window.
+                    % get the indices from the larger matrix, not the 
+                    %indices of the smaller TF window.
                     maxF = maxF+freqidx(1)-1;
                     maxT = maxT+timeidx(1)-1;
                     
                     % Now write out data and max time/frequency to file.
-                    % fprintf(fid,'%g\t',mean(mean(squeeze(tf(subno,condi,1,maxF-1:maxF+1,maxT-6:maxT+6)),1),2)); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    fprintf(fid,'%g\t',mean(mean(tempdat))); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    % this could also be one line:
-                    % fprintf(fid,'%g\t%g\t%g\t',mean(mean(tf_all(subno,condi,chani,maxF-1:maxF+1,maxT-1:maxT+1,1),4),5),mw_frex(maxF),tx(maxT));
+                    % 6 so as to have a proportional number of frequency 
+                    % (3) and timepoints in the subject TF window
+                    fprintf(fid,'%g\t',mean(mean(tempdat))); 
                 end
-                
             end
-            
         end
         
-        fprintf(fid,'\n'); %% CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        % CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        fprintf(fid,'\n'); 
         if subno > 0
             maxfreqdelta2(subno)=frex(maxF);
         else
@@ -517,36 +577,44 @@ for condi=1:size(tf,2) %
                 % Write out the column variable name of data.
                 if subno==0
                     
-                    fprintf(fid,[ num2str(time_windows(ti,1)) num2str(time_windows(ti,2)) '_f ' num2str(freq_windows(fi,1)) num2str(freq_windows(fi,2)) '\t' ]);
+                    fprintf(fid,[ num2str(time_windows(ti,1))...
+                        num2str(time_windows(ti,2)) '_f '...
+                        num2str(freq_windows(fi,1)) ...
+                        num2str(freq_windows(fi,2)) '\t' ]);
                     
                 else
                     
                     % get data from large window
-                    % Note: This is condition-specific; you could make it condition-average by taking the mean across the 2nd dimension.
-                    tempdat = squeeze(tf(subno,condi,1,freqidx(fi,1):freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
+                    % Note: This is condition-specific; 
+                    % you could make it condition-average by 
+                    % taking the mean across the 2nd dimension.
+                    tempdat = squeeze(tf(subno,condi,1,freqidx(fi,1):...
+                        freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
                     
-                    % find max point (must first vectorize otherwise you get max for each line)
+                    % find max point (must first vectorize otherwise 
+                    % you get max for each line)
                     [junk,maxpoint]=min(tempdat(:));
                     
                     % convert that back to 2d coordinates
                     [maxF,maxT]=ind2sub(size(tempdat),maxpoint);
                     
-                    % get the indices from the larger matrix, not the indices of the smaller TF window.
+                    % get the indices from the larger matrix, 
+                    % not the indices of the smaller TF window.
                     maxF = maxF+freqidx(1)-1;
                     maxT = maxT+timeidx(1)-1;
                     
                     % Now write out data and max time/frequency to file.
-                    % fprintf(fid,'%g\t',mean(mean(squeeze(tf(subno,condi,1,maxF-1:maxF+1,maxT-6:maxT+6)),1),2)); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    fprintf(fid,'%g\t',mean(mean(tempdat))); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    % this could also be one line:
-                    % fprintf(fid,'%g\t%g\t%g\t',mean(mean(tf_all(subno,condi,chani,maxF-1:maxF+1,maxT-1:maxT+1,1),4),5),mw_frex(maxF),tx(maxT));
+                    % 6 so as to have a proportional number of frequency 
+                    % (3) and timepoints in the subject TF window
+                    fprintf(fid,'%g\t',mean(mean(tempdat))); 
                 end
                 
             end
             
         end
         
-        fprintf(fid,'\n'); %% CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        % CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        fprintf(fid,'\n');
         if subno > 0
             maxfreqbeta(subno)=frex(maxF);
         else
@@ -572,8 +640,11 @@ save('maxFreq_beta.txt', 'maxfreqbeta', '-ascii', '-double', '-tabs')
 figure(23), clf
 
 climdb  = [0 150];
-contourf(times2save,frex,squeeze(mean(mean(squeeze(itpcz(:,:,1,:,:)) ,2) ,1)),60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-300 2000])
+contourf(times2save,frex,squeeze(mean(mean(squeeze(itpcz(:,:,1,:,:))...
+    ,2) ,1)),60,'linecolor','none')
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-300 2000])
 title('Averaged inter-trial phase clustering')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
@@ -584,36 +655,43 @@ colormap jet
 %
 % Power by condition
 figure(2), clf
-condiname = {'Gender-Neutral'; 'Gender-Fear'; 'Emotion-Neutral'; 'Emotion-Fear'; 'Congruent 1€'; 'Incongruent 1€'};
+condiname = {'Gender-Neutral'; 'Gender-Fear'; 'Emotion-Neutral';...
+    'Emotion-Fear'; 'Congruent 1€'; 'Incongruent 1€'};
 climdb  = [0 150];
 for condi=1:4
     subplot(2,2,condi)
-    contourf(times2save,frex,squeeze(mean(squeeze(itpcz(:,condi,1,:,:)) ,1)),60,'linecolor','none')
-    set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-300 2000])
+    contourf(times2save,frex,squeeze(mean(squeeze(itpcz(:,condi,1,:,:))...
+        ,1)),60,'linecolor','none')
+    set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+        log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+        log10(max_frex),6)*10)/10,'xlim', [-300 2000])
     title(condiname(condi))
     xlabel('Time (s)'), ylabel('Frequency (Hz)')
     colorbar
     ylabel(colorbar, 'ITPCz')
-    colormap jet
+    % colormap jet
 end
 %
 %
 
-%% Permutation testing to isolate significant clusters of tf power differences from baseline
+%% Permutation testing to isolate significant clusters 
+%  of tf power differences from baseline
 load(matfiles(1).name) % to get the time information from one dataset
 
-tfavg = squeeze(mean(itpcz(:,:,1,:,:), 2)); % take only first bipolar montage (channel 1)
+% take only first bipolar montage (channel 1)
+tfavg = squeeze(mean(itpcz(:,:,1,:,:), 2)); 
 
 nTimepoints = numel(times2save);
 baseidx = dsearchn(times2save',[-500 -200]');
 
 voxel_pval   = 0.01;
-cluster_pval = 0.05;
+cluster_pval = 0.01;
 n_permutes = 1000;
 
 % initialize null hypothesis matrices
 permuted_maxvals = zeros(n_permutes,2,num_frex);
-permuted_vals    = zeros(n_permutes,size(tfavg, 1),num_frex,numel(times2save));
+permuted_vals    = zeros(n_permutes,size(tfavg, 1),...
+    num_frex,numel(times2save));
 max_clust_info   = zeros(n_permutes,1);
 
 
@@ -621,7 +699,8 @@ for permi=1:n_permutes
     
     for subi = 1:size(tfavg, 1)
         cutpoint = randsample(2:nTimepoints-diff(baseidx)-2,1);
-        permuted_vals(permi,subi,:,:) = tfavg(subi,:,[cutpoint:end 1:cutpoint-1]);
+        permuted_vals(permi,subi,:,:) = tfavg(subi,:,...
+            [cutpoint:end 1:cutpoint-1]);
     end
     disp(['permutation ', num2str(permi), ' is done']);
 end
@@ -633,6 +712,41 @@ threshmean = realmean;
 threshmean(abs(zmap)<norminv(1-voxel_pval))=0;
 
 
+figure(28), clf
+subplot(221)
+contourf(times2save,frex,realmean, 60,'linecolor','none')
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+axis square
+title('Averaged time-frequency power')
+xlabel('Time (s)'), ylabel('Frequency (Hz)')
+colorbar
+ylabel(colorbar, 'dB  from baseline')
+
+
+subplot(222)
+contourf(times2save,frex,zmap, 60,'linecolor','none')
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+axis square
+title('unthresholded Z map')
+xlabel('Time (ms)'), ylabel('Frequency (Hz)')
+colorbar
+ylabel(colorbar, 'dB  from baseline')
+
+subplot(223)
+contourf(times2save,frex,threshmean, 60,'linecolor','none')
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+axis square
+title('Uncorrected power map')
+xlabel('Time (ms)'), ylabel('Frequency (Hz)')
+colorbar
+ylabel(colorbar, 'dB  from baseline')
+
 
 
 % this time, the cluster correction will be done on the permuted data, thus
@@ -640,12 +754,15 @@ threshmean(abs(zmap)<norminv(1-voxel_pval))=0;
 for permi = 1:n_permutes
     
     % for cluster correction, apply uncorrected threshold and get maximum cluster sizes
-    fakecorrsz = squeeze((perm_mean(permi,:,:)-mean(perm_mean,1)) ./ std(perm_mean,[],1) );
+    fakecorrsz = squeeze((perm_mean(permi,:,:)-mean(perm_mean,1))...
+        ./ std(perm_mean,[],1) );
     fakecorrsz(abs(fakecorrsz)<norminv(1-voxel_pval))=0;
     
     % get number of elements in largest supra-threshold cluster
     clustinfo = bwconncomp(fakecorrsz);
-    max_clust_info(permi) = max([ 0 cellfun(@numel,clustinfo.PixelIdxList) ]); % the zero accounts for empty maps
+    % zero accounts for empty maps
+    max_clust_info(permi) = max([ 0 ...
+        cellfun(@numel,clustinfo.PixelIdxList) ]); 
     % using cellfun here eliminates the need for a slower loop over cells
 end
 
@@ -685,13 +802,15 @@ end
 figure
 climdb  = [0 150];
 contourf(times2save,frex,realmean, 60,'linecolor','none')
-set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
 title({'Averaged' , 'inter-trial phase clustering'})
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
 ylabel(colorbar, 'ITPCz')
-colormap jet
+%colormap jet
 hold on
 contour(times2save,frex,zmapthresh, 1,'linecolor','k')
 ylabel('Frequency (Hz)')
@@ -706,9 +825,6 @@ y0=10;
 width=950;
 height=550;
 print('figure_itpcz', '-dpng', '-r1000')
-
-
-
 
 %% Theta
 % Definition of TF windows
@@ -737,7 +853,8 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_itpc_theta', num2str(condi), '.txt']);
+    statsfilename=(['statistics_file_TF_itpc_theta', ...
+        num2str(condi),'.txt']);
     
     fid=fopen(statsfilename,'w');
     
@@ -758,36 +875,43 @@ for condi=1:size(tf,2) %
                 % Write out the column variable name of data.
                 if subno==0
                     
-                    fprintf(fid,[ num2str(time_windows(ti,1)) num2str(time_windows(ti,2)) '_f ' num2str(freq_windows(fi,1)) num2str(freq_windows(fi,2)) '\t' ]);
+                    fprintf(fid,[ num2str(time_windows(ti,1)) ...
+                        num2str(time_windows(ti,2)) '_f ' ...
+                        num2str(freq_windows(fi,1)) ...
+                        num2str(freq_windows(fi,2)) '\t' ]);
                     
                 else
                     
                     % get data from large window
-                    % Note: This is condition-specific; you could make it condition-average by taking the mean across the 2nd dimension.
-                    tempdat = squeeze(itpcz(subno,condi,1,freqidx(fi,1):freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
+                    % Note: This is condition-specific; you could make it
+                    % condition-average by taking the mean across the 
+                    % 2nd dimension.
+                    tempdat = squeeze(itpcz(subno,condi,1,...
+                        freqidx(fi,1):freqidx(fi,2),...
+                        timeidx(ti,1):timeidx(ti,2)));
                     
-                    % find max point (must first vectorize otherwise you get max for each line)
+                    % find max point (must first vectorize otherwise 
+                    % you get max for each line)
                     [junk,maxpoint]=max(tempdat(:));
                     
                     % convert that back to 2d coordinates
                     [maxF,maxT]=ind2sub(size(tempdat),maxpoint);
                     
-                    % get the indices from the larger matrix, not the indices of the smaller TF window.
+                    % get the indices from the larger matrix, not the 
+                    % indices of the smaller TF window.
                     maxF = maxF+freqidx(1)-1;
                     maxT = maxT+timeidx(1)-1;
                     
                     % Now write out data and max time/frequency to file.
-                    % fprintf(fid,'%g\t',mean(mean(squeeze(tf(subno,condi,1,maxF-1:maxF+1,maxT-6:maxT+6)),1),2)); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    fprintf(fid,'%g\t',mean(mean(tempdat))); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    % this could also be one line:
-                    % fprintf(fid,'%g\t%g\t%g\t',mean(mean(tf_all(subno,condi,chani,maxF-1:maxF+1,maxT-1:maxT+1,1),4),5),mw_frex(maxF),tx(maxT));
+                    % 6 so as to have a proportional number of frequency 
+                    % (3) and timepoints in the subject TF window
+                    fprintf(fid,'%g\t',mean(mean(tempdat))); 
                 end
-                
             end
-            
         end
         
-        fprintf(fid,'\n'); %% CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        % CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        fprintf(fid,'\n'); 
         if subno > 0
             maxfreqtheta(subno)=frex(maxF);
         else
@@ -830,7 +954,8 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_itpc_delta', num2str(condi), '.txt']);
+    statsfilename=(['statistics_file_TF_itpc_delta',...
+        num2str(condi), '.txt']);
     
     fid=fopen(statsfilename,'w');
     
@@ -851,36 +976,42 @@ for condi=1:size(tf,2) %
                 % Write out the column variable name of data.
                 if subno==0
                     
-                    fprintf(fid,[ num2str(time_windows(ti,1)) num2str(time_windows(ti,2)) '_f ' num2str(freq_windows(fi,1)) num2str(freq_windows(fi,2)) '\t' ]);
+                    fprintf(fid,[ num2str(time_windows(ti,1)) ...
+                        num2str(time_windows(ti,2)) '_f ' ...
+                        num2str(freq_windows(fi,1)) ...
+                        num2str(freq_windows(fi,2)) '\t' ]);
                     
                 else
                     
                     % get data from large window
-                    % Note: This is condition-specific; you could make it condition-average by taking the mean across the 2nd dimension.
-                    tempdat = squeeze(itpcz(subno,condi,1,freqidx(fi,1):freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
+                    % Note: This is condition-specific; 
+                    % you could make it condition-average by taking the 
+                    % mean across the 2nd dimension.
+                    tempdat = squeeze(itpcz(subno,condi,1,freqidx(fi,1):...
+                        freqidx(fi,2),timeidx(ti,1):timeidx(ti,2)));
                     
-                    % find max point (must first vectorize otherwise you get max for each line)
+                    % find max point (must first vectorize otherwise 
+                    % you get max for each line)
                     [junk,maxpoint]=max(tempdat(:));
                     
                     % convert that back to 2d coordinates
                     [maxF,maxT]=ind2sub(size(tempdat),maxpoint);
                     
-                    % get the indices from the larger matrix, not the indices of the smaller TF window.
+                    % get the indices from the larger matrix, not the 
+                    % indices of the smaller TF window.
                     maxF = maxF+freqidx(1)-1;
                     maxT = maxT+timeidx(1)-1;
                     
                     % Now write out data and max time/frequency to file.
-                    % fprintf(fid,'%g\t',mean(mean(squeeze(tf(subno,condi,1,maxF-1:maxF+1,maxT-6:maxT+6)),1),2)); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    fprintf(fid,'%g\t',mean(mean(tempdat))); % 6 so as to have a proportional number of frequency (3) and timepoints in the subject TF window
-                    % this could also be one line:
-                    % fprintf(fid,'%g\t%g\t%g\t',mean(mean(tf_all(subno,condi,chani,maxF-1:maxF+1,maxT-1:maxT+1,1),4),5),mw_frex(maxF),tx(maxT));
+                    % 6 so as to have a proportional number of frequency 
+                    %(3) and timepoints in the subject TF window
+                    fprintf(fid,'%g\t',mean(mean(tempdat))); 
                 end
-                
             end
-            
         end
         
-        fprintf(fid,'\n'); %% CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        % CAREFUL THIS IS CRITICAL FOR GOOD ORGANIZATIONS OF LINES !!!
+        fprintf(fid,'\n');
         if subno > 0
             maxfreqdelta(subno)=frex(maxF);
         else
