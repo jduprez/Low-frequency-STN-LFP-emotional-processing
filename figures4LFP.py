@@ -13,9 +13,8 @@ import orca
 import seaborn as sns
 
 # Get path of the data to be used
-
-    inpath = '/your_path/'
-    outpath = 'your_output_path'
+inpath = '/Users/joanduprez/Desktop/W/Research/UR1-EA4712/LFP/Data_LFP emotions/' 
+outpath = '/Users/joanduprez/Desktop/W/Research/UR1-EA4712/LFP/Data_LFP emotions/results/'
 
 ## ----------------------------------------------------------------------------------------------------
 ## ----------------------------------------------------------------------------------------------------
@@ -80,11 +79,11 @@ gs = mpl.gridspec.GridSpec(nrows=2,
                            )
 ax[0] = fig.add_subplot(gs[0, 0])
 sns.set_palette('Paired')
-sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'delta1'], split=True)
+sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'delta'], split=True)
 
-sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'delta1'], dodge=True,
+sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'delta'], dodge=True,
               color="black", size=3, edgecolor='white', linewidth=0.5, alpha=0.5)
-ax[0].set_ylabel('delta 1 power (dB)')
+ax[0].set_ylabel('delta power (dB)')
 #ax[0].legend().set_visible(False)
 ax[0].set_xlabel('')
 ax[0].set_ylim([-12, 12])
@@ -108,10 +107,10 @@ ax[0].text(-0.95, 14, 'A', fontsize=16, fontweight='bold')
 
 
 ax[1] = fig.add_subplot(gs[0, 1])
-sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'delta2'], split=True)
-sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'delta2'], dodge=True,
+sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'alpha'], split=True)
+sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'alpha'], dodge=True,
               color="black", size=3, edgecolor='white', linewidth=0.5, alpha=0.5)
-ax[1].set_ylabel('delta 2 power (dB)')
+ax[1].set_ylabel('alpha power (dB)')
 ax[1].legend().set_visible(False)
 ax[1].set_xlabel('')
 ax[1].set_ylim([-12, 12])
@@ -126,7 +125,7 @@ ax[2] = fig.add_subplot(gs[1, 0])
 sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'beta'], split=True)
 sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'beta'], dodge=True,
               color="black", size=3, edgecolor='white', linewidth=0.5, alpha=0.5)
-ax[2].set_ylabel('alpha-beta power (dB)')
+ax[2].set_ylabel('beta power (dB)')
 ax[2].set_xlabel('')
 ax[2].legend().set_visible(False)
 ax[2].set_ylim([-12, 12])
@@ -161,9 +160,9 @@ gs = mpl.gridspec.GridSpec(nrows=1,
                            )
 ax[0] = fig.add_subplot(gs[0, 0])
 sns.set_palette('Paired')
-sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'delta1'], split=True)
+sns.violinplot(x="emo", y="pwr", hue='task', data=LFPdat[LFPdat.freq == 'delta'], split=True)
 
-sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'delta1'], dodge=True,
+sns.swarmplot(x="emo", y="pwr",hue='task', data=LFPdat[LFPdat.freq == 'delta'], dodge=True,
               color="black", size=3, edgecolor='white', linewidth=0.5, alpha=0.5)
 ax[0].set_ylabel('delta ITPCz')
 #ax[0].legend().set_visible(False)
