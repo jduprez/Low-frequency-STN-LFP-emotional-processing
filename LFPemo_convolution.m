@@ -14,6 +14,32 @@
 
 %% LFPemo analysis
 
+% loaded files have are an EEG structure such as in eeglab
+matfiles = dir(fullfile(['*.mat']));
+numfiles = length(matfiles);
+
+%% ERP
+ERP = zeros(numfiles, 3, 3000);
+for subno = 1:numfiles
+    
+    load(matfiles(subno).name) % load file
+    LFPemo.data = double(LFPemo.data); % convert to double precision
+    
+    for chani = 1:3
+    ERP(subno, chani, :) = squeeze(mean(LFPemo.data(chani,:,:), 3));
+    end
+end
+
+contact = {'0-1', '1-2', '2-3'};
+figure; 
+for chani = 1:3
+    subplot(3, 1, chani)
+    plot(LFPemo.times(501:3000),squeeze(mean(ERP(:, chani, 501:3000), 1)))
+    set(gca, 'ylim', [-0.6, 0.6]);
+    title(['ERP - Contact pair ' num2str(contact{chani})])
+end
+
+%% Time-frequency analyses
 % Soft-coded convolution parameters
 
 min_frex  =  1;
@@ -26,11 +52,7 @@ nCycRange = [4 10];
 times2save = -500:15:2000; % downsample to 100 Hz
 basetime   = [-600 -300]; % baseline period
 
-%% Load data
-% loaded files have are an EEG structure such as in eeglab
-matfiles = dir(fullfile(['*.mat']));
-numfiles = length(matfiles);
-
+% Load data
 % initialize output time-frequency data
 % 4 for the number of conditions, 3 number of channels
 tf = zeros(numfiles, 4, 3, num_frex,size(times2save,2)); 
@@ -133,15 +155,23 @@ figure(24), clf
 
 climdb  = [-1 1];
 contourf(times2save,frex,squeeze(mean(mean(squeeze(tf(:,:,1,:,:))...
-    ,2) ,1)),60,'linecolor','none')
+    ,2) ,1)), 20,'linecolor','none')
 set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
     log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
-    log10(max_frex),6)*10)/10,'xlim', [-300 2000])
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+axis square
 title('Averaged time-frequency power')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
 ylabel(colorbar, 'dB  from baseline')
-colormap jet
+cbh.FontSize = 28
+% ylabel(colorbar, 'dB  from baseline', 'FontSize', 18)
+ax = gca;
+ax.FontSize = 20;
+x0=10;
+y0=10;
+width=800;
+height=500;
 
 %
 % Power by condition
@@ -152,7 +182,7 @@ climdb  = [-1 1];
 for condi=1:4
     subplot(2,2,condi)
     contourf(times2save,frex,squeeze(mean(squeeze(tf(:,condi,1,:,:))...
-        ,1)),60,'linecolor','none')
+        ,1)),20,'linecolor','none')
     set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex)...
         ,log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
         log10(max_frex),6)*10)/10,'xlim', [-300 2000])
@@ -169,13 +199,13 @@ end
 load(matfiles(1).name) % to get the time information from one dataset
 
 % take only first bipolar montage (channel 1)
-tfavg = squeeze(mean(tf2(:,:,1,:,:), 2)); 
+tfavg = squeeze(mean(tf(:,:,1,:,:), 2)); 
 
 nTimepoints = numel(times2save);
 baseidx = dsearchn(times2save',[-500 -200]');
 
-voxel_pval   = 0.01;
-cluster_pval = 0.01;
+voxel_pval   = 0.05;
+cluster_pval = 0.05;
 n_permutes = 1000;
 
 % initialize null hypothesis matrices
@@ -257,8 +287,8 @@ for permi = 1:n_permutes
     
     % get number of elements in largest supra-threshold cluster
     clustinfo = bwconncomp(fakecorrsz);
-    max_clust_info(permi) = max([ 0 cellfun...
-        (@numel,clustinfo.PixelIdxList) ]); % zero accounts for empty maps
+    max_clust_info(permi) = max([ 0 cellfun(@numel,...
+        clustinfo.PixelIdxList)]); % zero accounts for empty maps
     % using cellfun here eliminates the need for a slower loop over cells
 end
 
@@ -301,8 +331,8 @@ zmapthresh=logical(zmapthresh);
 
 
 figure
-climdb  = [-1 1];
-contourf(times2save,frex,realmean, 60,'linecolor','none')
+climdb  = [-1, 1];
+contourf(times2save,frex,realmean, 20,'linecolor','none')
 set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
     log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
     log10(max_frex),6)*10)/10,'xlim', [-500 2000])
@@ -334,11 +364,11 @@ time = times2save;
 
 %% Power
 
-%% Delta 1
+%% Delta
 % Definition of TF windows
 
-time_windows = [ 325 700 ]; % 3 time windows
-freq_windows = [ frex(2) frex(8) ]; % 3 frequency windows
+time_windows = [ 490 760 ]; % 3 time windows
+freq_windows = [ frex(11) frex(18) ]; % 3 frequency windows
 
 % find indices corresponding to time and frequency windows
 
@@ -361,7 +391,7 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_delta1', num2str(condi), '.txt']);
+    statsfilename=(['statistics_file_TF_delta_reflected_rmtl', num2str(condi), '.txt']);
     
     fid=fopen(statsfilename,'w');
     
@@ -433,11 +463,11 @@ end % end condition loop
 
 
 
-%% Delta 2
+%% Alpha
 % Definition of TF windows
 
-time_windows = [ 295 655 ]; % 3 time windows
-freq_windows = [ frex(13) frex(19) ]; % 3 frequency windows
+time_windows = [ 1435 1780 ]; % 3 time windows
+freq_windows = [ frex(29) frex(35) ]; % 3 frequency windows
 
 % find indices corresponding to time and frequency windows
 
@@ -460,7 +490,7 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_delta2_', num2str(condi), '.txt']);
+    statsfilename=(['statistics_file_TF_alpha_reflected_rmtl_', num2str(condi), '.txt']);
     
     fid=fopen(statsfilename,'w');
     
@@ -529,11 +559,11 @@ end % end condition loop
 
 
 
-%% Alpha/Beta
+%% Beta
 % Definition of TF windows
 
-time_windows = [ 1465 1810 ]; % 3 time windows
-freq_windows = [ frex(27) frex(43) ]; % 3 frequency windows
+time_windows = [ 1390 1810 ]; % 3 time windows
+freq_windows = [ frex(37) frex(46) ]; % 3 frequency windows
 
 % find indices corresponding to time and frequency windows
 
@@ -556,7 +586,7 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_beta', num2str(condi), '.txt']);
+    statsfilename=(['statistics_file_TF_beta_reflected_rmtl_', num2str(condi), '.txt']);
     
     fid=fopen(statsfilename,'w');
     
@@ -639,30 +669,38 @@ save('maxFreq_beta.txt', 'maxfreqbeta', '-ascii', '-double', '-tabs')
 
 figure(23), clf
 
-climdb  = [0 150];
+climdb  = [0 200];
 contourf(times2save,frex,squeeze(mean(mean(squeeze(itpcz(:,:,1,:,:))...
-    ,2) ,1)),60,'linecolor','none')
-set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    ,2) ,1)),20,'linecolor','none')
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
     log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
-    log10(max_frex),6)*10)/10,'xlim', [-300 2000])
-title('Averaged inter-trial phase clustering')
+    log10(max_frex),6)*10)/10,'xlim', [-500 2000])
+axis square
+title('Averaged ITPCz')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
 colorbar
 ylabel(colorbar, 'ITPCz')
-colormap jet
+cbh.FontSize = 28
+% ylabel(colorbar, 'dB  from baseline', 'FontSize', 18)
+ax = gca;
+ax.FontSize = 20;
+x0=10;
+y0=10;
+width=800;
+height=500;
 
 %
 %
-% Power by condition
+% ITPCz by condition
 figure(2), clf
 condiname = {'Gender-Neutral'; 'Gender-Fear'; 'Emotion-Neutral';...
     'Emotion-Fear'; 'Congruent 1€'; 'Incongruent 1€'};
-climdb  = [0 150];
+climdb  = [0 250];
 for condi=1:4
     subplot(2,2,condi)
     contourf(times2save,frex,squeeze(mean(squeeze(itpcz(:,condi,1,:,:))...
         ,1)),60,'linecolor','none')
-    set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+    set(gca,'clim',climdb, 'yscale','log','ytick',logspace(log10(min_frex),...
         log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
         log10(max_frex),6)*10)/10,'xlim', [-300 2000])
     title(condiname(condi))
@@ -684,8 +722,8 @@ tfavg = squeeze(mean(itpcz(:,:,1,:,:), 2));
 nTimepoints = numel(times2save);
 baseidx = dsearchn(times2save',[-500 -200]');
 
-voxel_pval   = 0.01;
-cluster_pval = 0.01;
+voxel_pval   = 0.05;
+cluster_pval = 0.05;
 n_permutes = 1000;
 
 % initialize null hypothesis matrices
@@ -800,37 +838,33 @@ end
 
 
 figure
-climdb  = [0 150];
-contourf(times2save,frex,realmean, 60,'linecolor','none')
-set(gca,'yscale','log','ytick',logspace(log10(min_frex),...
+climdb  = [0 200];
+contourf(times2save,frex,realmean, 20,'linecolor','none')
+set(gca,'clim',climdb,'yscale','log','ytick',logspace(log10(min_frex),...
     log10(max_frex),6),'yticklabel',round(logspace(log10(min_frex),...
     log10(max_frex),6)*10)/10,'xlim', [-500 2000])
 axis square
-title({'Averaged' , 'inter-trial phase clustering'})
+title('Averaged ITPCz')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
-colorbar
-ylabel(colorbar, 'ITPCz')
-%colormap jet
 hold on
 contour(times2save,frex,zmapthresh, 1,'linecolor','k')
-ylabel('Frequency (Hz)')
-xlabel('Time (ms)')
-cbh.Label.String = 'ITPCz'
+colorbar
+ylabel(colorbar, 'ITPCz')
 cbh.FontSize = 28
 % ylabel(colorbar, 'dB  from baseline', 'FontSize', 18)
 ax = gca;
 ax.FontSize = 20;
 x0=10;
 y0=10;
-width=950;
-height=550;
-print('figure_itpcz', '-dpng', '-r1000')
+width=800;
+height=500;
+print('figure_itpcz_reflected_rmtl', '-dpng', '-r1000')
 
 %% Theta
 % Definition of TF windows
 
-time_windows = [ 70 505 ]; % 3 time windows
-freq_windows = [ frex(25) frex(30) ]; % 3 frequency windows
+time_windows = [ 300 580 ]; % 3 time windows
+freq_windows = [ frex(17) frex(20) ]; % 3 frequency windows
 
 % find indices corresponding to time and frequency windows
 
@@ -853,7 +887,7 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_itpc_theta', ...
+    statsfilename=(['statistics_file_TF_itpc_theta_reflected_rmtl_', ...
         num2str(condi),'.txt']);
     
     fid=fopen(statsfilename,'w');
@@ -930,8 +964,8 @@ save('maxFreq_theta.txt', 'maxfreqtheta', '-ascii', '-double', '-tabs')
 %% Delta
 % Definition of TF windows
 
-time_windows = [ 175 595 ]; % 3 time windows
-freq_windows = [ frex(13) frex(19) ]; % 3 frequency windows
+time_windows = [ 370 595 ]; % 3 time windows
+freq_windows = [ frex(10) frex(14) ]; % 3 frequency windows
 
 % find indices corresponding to time and frequency windows
 
@@ -954,7 +988,7 @@ end
 for condi=1:size(tf,2) %
     
     % pointer to stats file
-    statsfilename=(['statistics_file_TF_itpc_delta',...
+    statsfilename=(['statistics_file_TF_itpc_delta_reflected_rmtl',...
         num2str(condi), '.txt']);
     
     fid=fopen(statsfilename,'w');
