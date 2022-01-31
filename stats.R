@@ -4,11 +4,14 @@
 
 # This scripts needs the {lme4},{car}, {multcomp} and {MuMin} packages
 
-library(c('lme4', 'MuMin', 'car', 'multcomp'))
+library('lme4')
+library('MuMin')
+library('car')
+library('multcomp')
 
 ## Mixed models on behavior only - all the data
-
-data = read.table(paste("yourpath/behavior.txt"), header=TRUE, sep = "\t")
+        
+data = read.table(paste("/Users/joanduprez/Desktop/W/Research/UR1-EA4712/LFP/Data_LFP emotions/behavior.txt"), header=TRUE, sep = "\t")
 
 data$emotion = as.factor(data$emotion)
 data$task = as.factor(data$task)
@@ -36,7 +39,7 @@ with(data, aggregate(accuracy, list(data$emotion, data$task), sd))
 
 ## Power analyses
 
-dataLFP = read.table(paste("yourpath/statfile_trial.txt"), header=TRUE, sep = "\t")
+dataLFP = read.table(paste("/Users/joanduprez/Desktop/W/Research/UR1-EA4712/LFP/Data_LFP emotions/statfile_trial.txt"), header=TRUE, sep = "\t")
 
 dataLFP$emo = as.factor(dataLFP$emo)
 dataLFP$task = as.factor(dataLFP$task)
