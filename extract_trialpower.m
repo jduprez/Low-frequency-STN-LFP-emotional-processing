@@ -115,7 +115,7 @@ for subno=1:size(tfstruct,2)
         tempdat(triali, 3) = LFPemo.condition(triali);
         
     end
-    tfstruct(subno).meantfdat_delta1 = tempdat;
+    tfstruct(subno).meantfdat = tempdat;
 end
 
 
