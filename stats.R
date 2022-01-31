@@ -5,7 +5,7 @@
 # This scripts needs the {lme4},{car}, {multcomp} and {MuMin} packages
 
 library('lme4')
-library('MuMin')
+library('MuMIn')
 library('car')
 library('multcomp')
 
@@ -45,25 +45,25 @@ dataLFP$emo = as.factor(dataLFP$emo)
 dataLFP$task = as.factor(dataLFP$task)
 dataLFP$nucleus = as.factor(dataLFP$nucleus)
 
-## Analyses for delta1
+## Analyses for delta
 
 
 require(lme4)
-modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),]) 
-modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),]) # THIS ONE !
-modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta1"),])
+# modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),]) 
+modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta"),]) # THIS ONE !
+# modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
 # Get mean and sd
-with(dataLFP2[which(dataLFP2$freq == "delta1"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "delta1"),]$emo, dataLFP2[which(dataLFP2$freq == "delta1"),]$task), mean))
-with(dataLFP2[which(dataLFP2$freq == "delta1"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "delta1"),]$emo, dataLFP2[which(dataLFP2$freq == "delta1"),]$task), sd))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), sd))
 
 Anova(modd5)
 
@@ -80,24 +80,27 @@ lines(smooth.spline(fitted(modd5), residuals(modd5)))
 # R squared 
 r.squaredGLMM(modd5)
 
-## Analyses for delta2
+dataLFP$inter=interaction(dataLFP$emo,dataLFP$task)
+posthoc = lmer(pwr~inter +(task|n), data=dataLFP[which(dataLFP$freq == "delta"),]) # THIS ONE !
+postdelta = glht(posthoc,linfct=mcp(inter="Tukey"))
+summary(postdelta)
 
-modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),]) # THIS ONE !
-modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),]) 
-modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),]) 
-modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta2"),]) 
+
+## Analyses for alpha
+
+# modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+# modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+# modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+# modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),]) # THIS ONE !
+# modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+# modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),]) 
+# modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),]) 
+# modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "alpha"),]) 
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
-with(dataLFP2[which(dataLFP2$freq == "delta2"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "delta2"),]$emo, dataLFP2[which(dataLFP2$freq == "delta2"),]$task), mean))
-with(dataLFP2[which(dataLFP2$freq == "delta2"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "delta2"),]$emo, dataLFP2[which(dataLFP2$freq == "delta2"),]$task), sd))
-
-Anova(modd5, test.statistic = "F")
+Anova(modd5)
 residus<-residuals(modd5)
 qqnorm(residus)
 qqline(residus)
@@ -109,31 +112,34 @@ lines(smooth.spline(fitted(modd5), residuals(modd5)))
 
 r.squaredGLMM(modd5)
 
+with(dataLFP[which(dataLFP$freq == "alpha"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "alpha"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "alpha"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "alpha"),]$task), sd))
+
 # Posthoc analyses
 dataLFP$inter = interaction(dataLFP$emo, dataLFP$task) # Create an interaction variable
-posthoc = lmer(pwr~inter +(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
+posthoc = lmer(pwr~inter +(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
 
-postdelta2 = glht(posthoc,linfct=mcp(inter="Tukey"))
-summary(postdelta2)
+postalpha = glht(posthoc,linfct=mcp(inter="Tukey"))
+summary(postalpha)
 
 ## Analyses for beta
 
 
 require(lme4)
-modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "beta"),])
-modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "beta"),])
-modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "beta"),])
-modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "beta"),])
+# modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "beta"),])
+# modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "beta"),])
+# modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "beta"),])
+# modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "beta"),])
 modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "beta"),]) # THIS ONE !
-modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),])
-modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),]) 
-modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),]) 
-modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "beta"),]) 
+# modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),])
+# modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),]) 
+# modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "beta"),]) 
+# modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "beta"),]) 
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
-with(dataLFP2[which(dataLFP2$freq == "beta"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "beta"),]$emo, dataLFP2[which(dataLFP2$freq == "beta"),]$task), mean))
-with(dataLFP2[which(dataLFP2$freq == "beta"),], aggregate(pwr, list(dataLFP2[which(dataLFP2$freq == "beta"),]$emo, dataLFP2[which(dataLFP2$freq == "beta"),]$task), sd))
+with(dataLFP[which(dataLFP$freq == "beta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "beta"),]$emo, dataLFP[which(dataLFP$freq == "beta"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "beta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "beta"),]$emo, dataLFP[which(dataLFP$freq == "beta"),]$task), sd))
 
 Anova(modd5)
 residus<-residuals(modd5)
@@ -152,55 +158,53 @@ r.squaredGLMM(modd5)
 
 ## Same for ITPC
 
-dataLFP = read.table(paste("yourpath/statfile_itpc.txt"), header=TRUE, sep = "\t")
+dataLFP = read.table(paste("/Users/joanduprez/Desktop/W/Research/UR1-EA4712/LFP/Data_LFP emotions/statfile_itpc.txt"), header=TRUE, sep = "\t")
 
 dataLFP$emo = as.factor(dataLFP$emo)
 dataLFP$task = as.factor(dataLFP$task)
 dataLFP$nucleus = as.factor(dataLFP$nucleus)
 
-## Analyses for delta1
+## Analyses for delta
 
-modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])# THIS ONE
-modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta1"),])
+modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])# THIS ONE
+# modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+# modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
-with(dataLFP[which(dataLFP$freq == "delta1"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta1"),]$emo, dataLFP[which(dataLFP$freq == "delta1"),]$task), mean))
-with(dataLFP[which(dataLFP$freq == "delta1"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta1"),]$emo, dataLFP[which(dataLFP$freq == "delta1"),]$task), sd))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), sd))
 
-Anova(modd6, test.statistic = 'F')
-residus<-residuals(modd6)
+Anova(modd1, test.statistic = 'F')
+residus<-residuals(modd1)
 qqnorm(residus)
 qqline(residus)
 
-plot(fitted(modd5), residuals(modd6),
+plot(fitted(modd1), residuals(modd1),
      xlab = "Fitted Values", ylab = "Residuals")
 abline(h=0, lty=2)
-lines(smooth.spline(fitted(modd6), residuals(modd6)))
+lines(smooth.spline(fitted(modd1), residuals(modd1)))
 
 
-r.squaredGLMM(modd6)
-
-
+r.squaredGLMM(modd1)
 
 ## Analyses for theta
 
-modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])# THIS ONE
-modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),]) 
-modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
-modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "theta"),])
+modd1 = lmer(pwr~emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "theta"),])# THIS ONE
+# modd2 = lmer(pwr~emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd3 = lmer(pwr~emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd4 = lmer(pwr~emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd5 = lmer(pwr~emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd6 = lmer(pwr~emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd7 = lmer(pwr~emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd8 = lmer(pwr~emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "theta"),])
+# modd9 = lmer(pwr~emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "theta"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
@@ -208,18 +212,18 @@ with(dataLFP[which(dataLFP$freq == "theta"),], aggregate(pwr, list(dataLFP[which
 with(dataLFP[which(dataLFP$freq == "theta"),], aggregate(pwr, list(dataLFP[which(dataLFP$freq == "theta"),]$emo, dataLFP[which(dataLFP$freq == "theta"),]$task), sd))
 
 
-Anova(modd5, test.statistic = 'F')
-residus<-residuals(modd5)
+Anova(modd1, test.statistic = 'F')
+residus<-residuals(modd1)
 qqnorm(residus)
 qqline(residus)
 
-plot(fitted(modd5), residuals(modd5),
+plot(fitted(modd1), residuals(modd1),
      xlab = "Fitted Values", ylab = "Residuals")
 abline(h=0, lty=2)
-lines(smooth.spline(fitted(modd5), residuals(modd5)))
+lines(smooth.spline(fitted(modd1), residuals(modd1)))
 
 
-r.squaredGLMM(modd5)
+r.squaredGLMM(modd1)
 
 ## Associations between power/ITPC and behavior (accuracy)
 
@@ -227,20 +231,20 @@ dataLFP = read.table(paste("yourpath/statfile_itpc.txt"), header=TRUE, sep = "\t
 
 ## Accuracy delta 1
 
-modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),])# THIS ONE !
-modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),]) 
-modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta1"),])
+modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),])# THIS ONE !
+modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),]) 
+modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
-with(dataLFP[which(dataLFP$freq == "delta1"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta1"),]$emo, dataLFP[which(dataLFP$freq == "delta1"),]$task), mean))
-with(dataLFP[which(dataLFP$freq == "delta1"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta1"),]$emo, dataLFP[which(dataLFP$freq == "delta1"),]$task), sd))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "delta"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta"),]$emo, dataLFP[which(dataLFP$freq == "delta"),]$task), sd))
 
 Anova(modd3, test.statistic = "F")
 
@@ -263,20 +267,20 @@ r.squaredGLMM(modd3)
 
 ## Accuracy delta 2
 
-modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta2"),])# THIS ONE !
-modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta2"),]) 
-modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta2"),])
-modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta2"),])
+modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "alpha"),])# THIS ONE !
+modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "alpha"),]) 
+modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "alpha"),])
+modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "alpha"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
-with(dataLFP[which(dataLFP$freq == "delta2"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta2"),]$emo, dataLFP[which(dataLFP$freq == "delta2"),]$task), mean))
-with(dataLFP[which(dataLFP$freq == "delta2"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "delta2"),]$emo, dataLFP[which(dataLFP$freq == "delta2"),]$task), sd))
+with(dataLFP[which(dataLFP$freq == "alpha"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "alpha"),]$emo, dataLFP[which(dataLFP$freq == "alpha"),]$task), mean))
+with(dataLFP[which(dataLFP$freq == "alpha"),], aggregate(accuracy, list(dataLFP[which(dataLFP$freq == "alpha"),]$emo, dataLFP[which(dataLFP$freq == "alpha"),]$task), sd))
 
 Anova(modd3, test.statistic = "F")
 
@@ -327,15 +331,15 @@ dataLFP$nucleus = as.factor(dataLFP$nucleus)
 
 # Delta
 
-modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),])# THIS ONE !
-modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta1"),]) 
-modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta1"),])
-modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta1"),])
+modd1 = lmer(accuracy~pwr+emo*task +(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd2 = lmer(accuracy~pwr+emo*task+nucleus+(1|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd3 = lmer(accuracy~pwr+emo*task +(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),])# THIS ONE !
+modd4 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n), data=dataLFP[which(dataLFP$freq == "delta"),]) 
+modd5 = lmer(accuracy~pwr+emo*task +(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd6 = lmer(accuracy~pwr+emo*task+nucleus+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd7 = lmer(accuracy~pwr+emo*task +(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd8 = lmer(accuracy~pwr+emo*task+nucleus+(emo|n)+(task|n), data=dataLFP[which(dataLFP$freq == "delta"),])
+modd9 = lmer(accuracy~pwr+emo*task + nucleus +(emo|n)+(task|n)+(n|nucleus), data=dataLFP[which(dataLFP$freq == "delta"),])
 
 anova(modd1, modd2, modd3, modd4, modd5, modd6, modd7, modd8, modd9) # Compare models and keep the one that converges with the lower AIC
 
