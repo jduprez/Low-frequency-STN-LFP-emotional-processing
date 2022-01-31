@@ -139,7 +139,6 @@ for subno = 1:numfiles
         end % end frequencies loop
         
     end% end channel loop
-    
     disp(['subject ', num2str(subno), ' is done'])
 end% subject loop
 
@@ -661,6 +660,11 @@ maxfreqbeta=maxfreqbeta';
 save('maxFreq_delta1.txt', 'maxfreqdelta1', '-ascii', '-double', '-tabs')
 save('maxFreq_delta2.txt', 'maxfreqdelta2', '-ascii', '-double', '-tabs')
 save('maxFreq_beta.txt', 'maxfreqbeta', '-ascii', '-double', '-tabs')
+
+%% Extract trial-level power
+%  from the tf windows of interest
+
+extract_trialpower
 
 
 %% Same thing for ITPCZ
